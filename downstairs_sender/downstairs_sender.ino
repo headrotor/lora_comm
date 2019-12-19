@@ -90,7 +90,8 @@ byte localAddress = 0xBB;     // address of this device
 byte destAddress = 0xFD;      // destination to send to
 
 
-float max_shake = 0.;
+float max_shake = 0.;  // maximum mag acceleration since we last checked
+float angle; // last detected y tilt
 
 void setup()
 {
@@ -142,13 +143,13 @@ void setup()
 void set_rgb(byte r, byte g, byte b) {
   int i = 0;
   for (i = 0;  i < NUM_LEDS; i++) {
-  /*
-    if (i < 4) {
-      leds[i].setRGB(r, g, b);
-    } else {
-      leds[i].setRGB(0, 0, 0);
+    /*
+      if (i < 4) {
+        leds[i].setRGB(r, g, b);
+      } else {
+        leds[i].setRGB(0, 0, 0);
 
-    }
+      }
     */
     leds[i].setRGB(r, g, b);
 
@@ -157,7 +158,7 @@ void set_rgb(byte r, byte g, byte b) {
 }
 
 void send_next_msg() {
-  float angle;
+
   switch (state) {
 
     case TEMP_OP:
@@ -169,13 +170,6 @@ void send_next_msg() {
       break;
     case ANGY_OP:
 
-      mpu6050.update();
-      angle = mpu6050.getAccAngleY();
-
-      if (abs(angle) > tilt_thresh_deg) {
-        mail_seconds = 1;
-        Serial.println("Mail detected!");
-      }
 
       snprintf(lora_str, PACKET_BYTES, "angy: % 5.2f", angle);
       break;
@@ -234,21 +228,29 @@ void loop()
 
   if (now - lastSecond > 1000) {
 
+    mpu6050.update();
+    angle = mpu6050.getAccAngleY();
+
     if (mail_seconds) {
       ++mail_seconds;
     }
+
+    
+    if (abs(angle) > tilt_thresh_deg) {
+      mail_seconds = 1;
+      Serial.println("Mail detected!");
+    }
+
     update_display();
     lastSecond = now;
   }
 
 
   if (mail_seconds > int(3600 * mail_timeout_hrs)) {
-    Serial.println("Mail indicator off");
     mail_seconds = 0;
     set_rgb(0, 0, 0);
   }
   if (mail_seconds > mail_delay_sec) {
-    Serial.println("Mail indicator on");
     set_rgb(0, 0xFF, 0);
   }
 
