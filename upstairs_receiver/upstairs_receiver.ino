@@ -5,7 +5,14 @@
   sends recieves LED commands
 
 */
+
+
+// Board: Heltec WiFi LoRa 32(V2)
+// pinout https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/blob/master/PinoutDiagram/WIFI_LoRa_32_V2.pdf
+
+
 #include "heltec.h"
+
 
 #define BAND    433E6  //you can set band here directly,e.g. 868E6,915E6
 

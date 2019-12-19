@@ -15,6 +15,9 @@
 
 #include "FastLED.h"
 
+#include <MPU6050_tockn.h>
+#include "Adafruit_BME680.h"
+
 
 
 //timing:
@@ -25,18 +28,28 @@ int interval_ms = 5000;          // interval between sends
 
 int mail_seconds = 0; // seconds since mail indicator was lit
 float mail_timeout_hrs = 10; // time out mail indicator after this many hours lit
-int mail_delay_sec = 30;    // Light mail indicator after this many seconds
+int mail_delay_sec = 20;    // Light mail indicator after this many seconds
 
 
 float tilt_thresh_deg = 5.0; // tilt more than this to trigger mail sensor
 
+
+// Pinout:
+// FastLED data out
+//#define NEOPIXEL_PIN 22
+#define NEOPIXEL_PIN 0
+
+// Put all I2C hardware on this bus.
+#define PIN_SDA 4
+#define PIN_SCL 15
+// turn on this pin to enable 3.3 VEXT
+#define VEXT_PIN 21
+
+
+
 //fastled
 #define NUM_LEDS 24
 CRGB leds[NUM_LEDS];
-#define NEOPIXEL_PIN 22
-
-#include <MPU6050_tockn.h>
-#include "Adafruit_BME680.h"
 
 
 #define SEALEVELPRESSURE_HPA (1013.25)
@@ -46,9 +59,6 @@ Adafruit_BME680 bme; // I2C
 // MPU6050 9-dof sensor to get mailbox tilt
 MPU6050 mpu6050(Wire);
 
-// Put all I2C hardware on this bus.
-#define PIN_SDA 4
-#define PIN_SCL 15
 
 
 
@@ -89,6 +99,12 @@ void setup()
   //WIFI Kit series V1 not support Vext control
   Heltec.begin(true /*DisplayEnable Enable*/, true /*Heltec.LoRa Enable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, BAND /*long BAND*/);
 
+  // Turn on VEXT
+  pinMode(VEXT_PIN, OUTPUT);
+  digitalWrite(VEXT_PIN, LOW);
+
+
+
   snprintf(buff, PACKET_BYTES, "addr:02x%, dest:%02x", localAddress, destAddress);
   Serial.println("downstairs:" + String(buff));
 
@@ -116,7 +132,7 @@ void setup()
   bme.setGasHeater(320, 150); // 320*C for 150 ms
 
 
-  FastLED.addLeds<NEOPIXEL, 22>(leds, NUM_LEDS);
+  FastLED.addLeds<NEOPIXEL, NEOPIXEL_PIN>(leds, NUM_LEDS);
   // turn off if on
   set_rgb(0, 0, 0);
   delay(1000);
@@ -126,12 +142,16 @@ void setup()
 void set_rgb(byte r, byte g, byte b) {
   int i = 0;
   for (i = 0;  i < NUM_LEDS; i++) {
+  /*
     if (i < 4) {
       leds[i].setRGB(r, g, b);
     } else {
       leds[i].setRGB(0, 0, 0);
 
     }
+    */
+    leds[i].setRGB(r, g, b);
+
   }
   FastLED.show();
 }
@@ -321,11 +341,11 @@ void parse_lora_cmd(String in) {
 
   //Serial.println("parsing: " + in);
   if (sscanf(lora_str, "disp: %i", &tempi)) {
-  /*
-    Serial.print("got LoRa disp command: ");
-    Serial.println(lora_str);
-    Serial.println(tempi);
-  */
+    /*
+      Serial.print("got LoRa disp command: ");
+      Serial.println(lora_str);
+      Serial.println(tempi);
+    */
     if (tempi) {
       Heltec.display->displayOn();
     }
