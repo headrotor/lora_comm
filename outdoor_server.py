@@ -13,7 +13,7 @@ import traceback
 import serial
 # local serial wrapper class
 #sys.path.append('../common')
-import serial_io
+import serial
 
 def parse_message(thestr):
     if len(instr) == 0:
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     portname = '/dev/ttyUSB0'
     portbaud = '115200'
     #portbaud = '120000000'
-    daq_ser = serial_io.SerialIO(portname,portbaud,timeout=0.0)
+    daq_ser = serial.Serial(portname,portbaud,timeout=0.0)
     if daq_ser.status == "OK":
         print("opened port " + portname + " for device outdoor_rcv")
     else:
