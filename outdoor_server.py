@@ -19,42 +19,47 @@ def parse_message(thestr):
     if len(instr) == 0:
         return
     parse = instr.split()
+    #print(str(parse))
     if len(parse) == 3:
         if parse[0] == 'Message:':
-            print(instr.strip())
+            #print(instr.strip())
+            print("{}, {}, {}".format(time.time(), parse[1], parse[2]))
 
+            
 if __name__ == '__main__':
-    portname = '/dev/ttyUSB0'
+    portname = '/dev/ttyUSB1'
     portbaud = '115200'
     #portbaud = '120000000'
-    daq_ser = serial.Serial(portname,portbaud,timeout=0.0)
-    if daq_ser.status == "OK":
-        print("opened port " + portname + " for device outdoor_rcv")
-    else:
+    try:
+        ser = serial.Serial(portname,portbaud,timeout=0.1)
+    except serial.serialutil.SerialException as e:
         print("Error opening port " + portname + " for device outdoor_rcv")
+        raise e
         exit(0)
 
     then = time.time()
     while(True):
         try:
-            instr = daq_ser.ser.readline()
+            bstr = ser.readline()
         except serial.serialutil.SerialException as e: 
             print("error reading serial data")
             print(e)
-            instr = ""
+            bstr = b"oops"
             time.sleep(10)
 
+        instr = bstr.decode('utf-8')
         if len(instr) > 0:
-            print(instr.strip())
-        parse_message(instr)
+            parse_message(instr)
  
         now = time.time()
-        if (now - then) > 2:
+
+        #if (now - then) > 2:
+        if False:
             then = now
             print("interval time: sending")
  
             try:
-                daq_ser.ser.write("disp: 1\n")
-                daq_ser.ser.write("rgb: 0  0 00\n")
+                ser.write(bytes("disp: 1\n", 'utf-8'))
+                #ser.write("rgb: 0  0 0 0\n")
             except Exception as e:
-                print e
+                print(e)
