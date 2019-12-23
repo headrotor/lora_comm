@@ -13,7 +13,7 @@ import traceback
 import serial
 # local serial wrapper class
 #sys.path.append('../common')
-import serial
+import simplejson
 
 
 from ubidots import ApiClient
@@ -62,12 +62,17 @@ def parse_message(thestr, logfn, api):
                 elif parse[1] == "shake:":
                     var = api.get_variable('5dfbc1961d84727933e5b16f')
 
+                elif parse[1] == "door:":
+                    var = api.get_variable('5dfcf6be1d8472084f0d6e7c')
+
+                    
             except simplejson.scanner.JSONDecodeError:
                 return
 
             if var is not None:
                 try:
                     val = var.save_value({'value': float(parse[2])})
+                    print("sent val")
                 except ValueError:
                     print("No JSON received, skipping")
 
