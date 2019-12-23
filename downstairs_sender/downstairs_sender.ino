@@ -28,16 +28,16 @@ int interval_ms = 5050;          // interval between sends
 
 int mail_seconds = 0; // seconds since mail indicator was lit
 float mail_timeout_hrs = 10; // time out mail indicator after this many hours lit
-int mail_delay_sec = 20;    // Light mail indicator after this many seconds
-
-
-float tilt_thresh_deg = 5.0; // tilt more than this to trigger mail sensor
+int mail_delay_sec = 0;    // Light mail indicator after this many seconds
+int mail_open_seconds = 0;  // open mailbox this many seconds before starting mail count.
+#define MAIL_OPEN_SECONDS (5)  // open mailbox this many seconds before starting mail count.
+float tilt_thresh_deg = 10.0; // tilt more than this to trigger mail sensor
 
 
 // Pinout:
 // FastLED data out
-//#define NEOPIXEL_PIN 22
-#define NEOPIXEL_PIN 0
+#define NEOPIXEL_PIN 13
+//#define NEOPIXEL_PIN 0
 
 // Put all I2C hardware on this bus.
 #define PIN_SDA 4
@@ -146,8 +146,8 @@ void setup()
 
   FastLED.addLeds<NEOPIXEL, NEOPIXEL_PIN>(leds, NUM_LEDS);
   // turn off if on
-  set_rgb(0, 0, 0);
-  delay(1000);
+  set_rgb(0,   0, 0);
+
 
 }
 
@@ -155,12 +155,12 @@ void set_rgb(byte r, byte g, byte b) {
   int i = 0;
   for (i = 0;  i < NUM_LEDS; i++) {
     /*
-      if (i < 4) {
-        leds[i].setRGB(r, g, b);
-      } else {
-        leds[i].setRGB(0, 0, 0);
+        if (i < 4) {
+          leds[i].setRGB(r, g, b);
+        } else {
+          leds[i].setRGB(0, 0, 0);
 
-      }
+        }
     */
     leds[i].setRGB(r, g, b);
 
@@ -220,7 +220,7 @@ void send_next_msg() {
       break;
 
     case  DOOR_OP:
-      snprintf(lora_str, PACKET_BYTES, "door: %1d",door_flag);
+      snprintf(lora_str, PACKET_BYTES, "door: %1d", door_flag);
       break;
 
     default:
@@ -260,9 +260,17 @@ void loop()
 
 
     if (abs(angle) > tilt_thresh_deg) {
-      mail_seconds = 1;
+      ++mail_open_seconds;
+      if (mail_open_seconds > MAIL_OPEN_SECONDS){
+        // start counting
+        ++mail_seconds;
+      }
+    }
+    else {
+      mail_open_seconds = 0;
     }
 
+    //Serial.println(mail_open_seconds);
 
     if (digitalRead(DOOR_PIN) == HIGH) {
       door_flag = 1;
@@ -273,8 +281,8 @@ void loop()
 
     }
 
-    Serial.print("Door flag:");
-    Serial.println(door_flag);
+    //Serial.print("Door flag:");
+    //Serial.println(door_flag);
 
     update_display();
     lastSecond = now;
@@ -288,7 +296,11 @@ void loop()
   if (mail_seconds > mail_delay_sec) {
     set_rgb(0, 0xFF, 0);
   }
+  else {
+    set_rgb(0, 0, 0);
 
+  }
+  delay(1);
 
 
 
