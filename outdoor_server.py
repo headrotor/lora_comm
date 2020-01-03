@@ -38,7 +38,7 @@ def parse_message(thestr, logfn, api):
     if len(parse) == 3:
         if parse[0] == 'Message:':
             print(instr.strip())
-            #print("{}, {}, {}".format(time.time(), parse[1], parse[2]))
+            print("{}, {}, {}".format(time.time(), parse[1], parse[2]))
             with open(logfn, "a") as logfile:
                 logfile.write("{}, {}, {}\n".format(time.time(),
                                                     ndict[parse[1]],
@@ -98,6 +98,7 @@ if __name__ == '__main__':
         exit(0)
 
     then = time.time()
+    print("listening")
     while(True):
         try:
             bstr = ser.readline()
