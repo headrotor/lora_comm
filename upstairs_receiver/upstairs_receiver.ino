@@ -5,14 +5,10 @@
   sends recieves LED commands
 
 */
-
-
 // Board: Heltec WiFi LoRa 32(V2)
 // pinout https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/blob/master/PinoutDiagram/WIFI_LoRa_32_V2.pdf
 
-
 #include "heltec.h"
-
 
 #define BAND    433E6  //you can set band here directly,e.g. 868E6,915E6
 
@@ -235,7 +231,11 @@ void update_display() {
     if (mail_seconds) {
       if (mail_seconds < 3600) {
         Heltec.display->drawString(3, 36, "mail " + String(int(floor(mail_seconds / 60.))) + " min ago");
-      } else {
+      } 
+      else if (mail_seconds < 7200) {
+        Heltec.display->drawString(3, 36, "mail 1 hour ago");
+      }
+      else  {
         Heltec.display->drawString(3, 36, "mail " + String(int(floor(mail_seconds / 3600.))) + " hrs ago");
       }
     } else {
