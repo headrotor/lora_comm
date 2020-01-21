@@ -23,6 +23,7 @@ from ubidots import ApiClient
 def carbon_write(varname, value):
     sock = socket.socket()
     sock.connect( ("localhost", 2003) )
+    varname = varname.strip(':')
     msg = "{}.metric {} {}\n".format(varname, value, time.time())
     sock.send(msg.encode('utf-8'))
     sock.close()
@@ -91,17 +92,18 @@ def parse_message(thestr, logfn, api):
             try:
                 ubidots_write(parse[1], parse[2])
             except Exception as e:
-                print("caught ubidots exception")
-                raise e
+                print("caught ubidots write exception, ignoring")
+                time.sleep(1)
             try:
                 carbon_write(parse[1], parse[2])
             except Exception as e:
-                print("caught carbon exception")
-                raise e
+                print("caught carbon exception, ignoring")
+                # happens when server is down, just ignore
+                time.sleep(5)
             sys.stdout.flush()
             
 if __name__ == '__main__':
-    portname = '/dev/ttyUSB0'
+    portname = '/dev/ttyUSB2'
     portbaud = '115200'
     #portbaud = '120000000'
 
@@ -130,7 +132,12 @@ if __name__ == '__main__':
             bstr = b"oops"
             time.sleep(10)
 
-        instr = bstr.decode('utf-8')
+
+        try:
+            instr = bstr.decode('utf-8')
+        except UnicodeDecodeError:
+            instr = ""
+
         if len(instr) > 0:
             #print(instr)
             parse_message(instr, logfname, api)
