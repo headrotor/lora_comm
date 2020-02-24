@@ -24,9 +24,9 @@
 unsigned long lastSendTime = 0;        // last send time
 unsigned long lastSecond = 0;        // use for second ticker
 
-int interval_ms = 5050;          // interval between sends
+unsigned long  interval_ms = 5050;          // interval between sends
 
-int mail_seconds = 0; // seconds since mail indicator was lit
+unsigned long mail_seconds = 0; // seconds since mail indicator was lit
 float mail_timeout_hrs = 10; // time out mail indicator after this many hours lit
 int mail_delay_sec = 0;    // Light mail indicator after this many seconds
 int mail_open_seconds = 0;  // open mailbox this many seconds before starting mail count.
@@ -241,15 +241,16 @@ void send_next_msg() {
 void loop()
 {
 
-  unsigned long now = millis();
-
+` // fixed 24 feb 2020, forgot unsigned! 
+  unsigned long now = (unsigned long) millis();
+  
   if (now - lastSendTime > interval_ms) {
 
     send_next_msg();
-    lastSendTime = now;            // timestamp the message
+    lastSendTime = millis();            // timestamp the message
   }
 
-  if (now - lastSecond > 1000) {
+  if (now - lastSecond > (unsigned long) 1000) {
 
     mpu6050.update();
     angle = mpu6050.getAccAngleY();
@@ -289,8 +290,9 @@ void loop()
   }
 
 
-  if (mail_seconds > int(3600 * mail_timeout_hrs)) {
+  if (mail_seconds > (long int) 3600 * mail_timeout_hrs) {
     mail_seconds = 0;
+    mail_open_seconds = 0;
     set_rgb(0, 0, 0);
   }
   if (mail_seconds > mail_delay_sec) {
