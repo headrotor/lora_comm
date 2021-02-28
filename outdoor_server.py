@@ -13,12 +13,18 @@ import time
 import traceback
 import serial
 import socket
+from pathlib import Path
+import os
 # local serial wrapper class
 #sys.path.append('../common')
 import simplejson
 
+import psutil
+
 
 from ubidots import ApiClient
+
+mailfile = '/tmp/mail.txt'
 
 def carbon_write(varname, value):
     sock = socket.socket()
@@ -30,6 +36,7 @@ def carbon_write(varname, value):
     print("sent carbon " + msg)
 
 
+    
 def ubidots_write(varname, value):
     var = None
     try:
@@ -40,6 +47,15 @@ def ubidots_write(varname, value):
         elif varname == "humid:":
             var = api.get_variable('5dfbc00c1d847274748affbd')
         elif varname == "mail:":
+            print("mail")
+            print(str(value))
+            if float(value) > 0.5:
+                Path(mailfile).touch()                
+                print("touched {}".format(mailfile))
+            else:
+                if os.path.exists(mailfile):
+                    print("removing " + mailfile)
+                    os.remove(mailfile)
             var = api.get_variable('5dfbc10c1d84727786722701')             
         elif varname == "gasr:":
             var = api.get_variable('5dfbc1431d847277843eb54d')             
@@ -89,10 +105,15 @@ def parse_message(thestr, logfn, api):
 
             
             var = None
+            # parse[1] is type of message, parse[2] is value
             try:
-                ubidots_write(parse[1], parse[2])
+                if parse[1] == "mail:":
+                    if int(parse[2]) > 10:
+                        Path(mailfile).touch()                
+                        print("touched mail file {}".format(mailfile))
+                #ubidots_write(parse[1], parse[2])
             except Exception as e:
-                print("caught ubidots write exception, ignoring")
+                print("caught parse exception, ignoring")
                 time.sleep(1)
             try:
                 carbon_write(parse[1], parse[2])
@@ -103,13 +124,13 @@ def parse_message(thestr, logfn, api):
             sys.stdout.flush()
             
 if __name__ == '__main__':
-    portname = '/dev/ttyUSB2'
+    portname = '/dev/ttyUSB0'
     portbaud = '115200'
     #portbaud = '120000000'
 
     logfname = "/home/pi/outdoor.log"
 
-
+    #ubidots
     api = ApiClient(token='BBFF-gjV5Rkr2FXKR4DRCwjDvlBRSjruPKP')
 
     print("starting")
@@ -145,13 +166,29 @@ if __name__ == '__main__':
             
         now = time.time()
 
-        #if (now - then) > 2:
-        if False:
+        if (now - then) > 60:
+            
             then = now
             print("interval time: sending")
- 
+            #zero on first call, should fix that
+            cpu_pct = psutil.cpu_percent()
+            #cpu_pct = psutil.getloadavg()
+            #print("cpu load:  {}".format(cpu_pct))
+            #print('memory % used:', psutil.virtual_memory()[2])
+            cpu_mem = psutil.virtual_memory()[2]
+            print("cpu load:  {}".format(cpu_pct))
+
             try:
-                ser.write(bytes("disp: 1\n", 'utf-8'))
-                #ser.write("rgb: 0  0 0 0\n")
+                carbon_write("pidp_load", cpu_pct)
+                carbon_write("pidp_mem", cpu_meme)
             except Exception as e:
-                print(e)
+                print("caught carbon exception, ignoring")
+                # happens when server is down, just ignore
+                time.sleep(5)
+
+
+            # try:
+            #     ser.write(bytes("disp: 1\n", 'utf-8'))
+            #     #ser.write("rgb: 0  0 0 0\n")
+            # except Exception as e:
+            #     print(e)
