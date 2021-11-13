@@ -10,6 +10,7 @@
 // pinout https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/blob/master/PinoutDiagram/WIFI_LoRa_32_V2.pdf
 
 #include <Wire.h>
+//https://heltec-automation-docs.readthedocs.io/en/latest/esp32/quick_start.html
 #include "heltec.h"
 
 
@@ -24,7 +25,7 @@
 unsigned long lastSendTime = 0;        // last send time
 unsigned long lastSecond = 0;        // use for second ticker
 
-unsigned long  interval_ms = 5050;          // interval between sends
+unsigned long  interval_ms = (unsigned long)5050L;          // interval between sends
 
 unsigned long mail_seconds = 0; // seconds since mail indicator was lit
 float mail_timeout_hrs = 10; // time out mail indicator after this many hours lit
@@ -169,16 +170,21 @@ void set_rgb(byte r, byte g, byte b) {
 }
 
 void send_next_msg() {
+  Serial.print("sending state ");
+  Serial.println(state);
 
   switch (state) {
 
     case TEMP_OP:
       if (! bme.performReading()) {
         Serial.println("Error reading BME");
-        return;
+        snprintf(lora_str, PACKET_BYTES, "temp: ERR" );
       }
-      snprintf(lora_str, PACKET_BYTES, "temp: %4.1f", bme.temperature - 3.0 );
+      else {
+        snprintf(lora_str, PACKET_BYTES, "temp: %4.1f", bme.temperature - 3.0 );
+      }
       break;
+
     case ANGY_OP:
 
 
@@ -193,25 +199,31 @@ void send_next_msg() {
     case  BARO_OP:
       if (! bme.performReading()) {
         Serial.println("Error reading BME");
-        return;
+        snprintf(lora_str, PACKET_BYTES, "baro: ERR");
       }
-      snprintf(lora_str, PACKET_BYTES, "baro: % 5.2f", bme.pressure / 100.0);
+      else {
+        snprintf(lora_str, PACKET_BYTES, "baro: % 5.2f", bme.pressure / 100.0);
+      }
       break;
 
     case  GASR_OP:
       if (! bme.performReading()) {
-        Serial.println("Error reading BME");
-        return;
+        Serial.println("Error reading BME GAS");
+        snprintf(lora_str, PACKET_BYTES, "gasr: ERR");
+
       }
-      snprintf(lora_str, PACKET_BYTES, "gasr: % 7.2f", bme.gas_resistance / 1000.0);
+      else {
+        snprintf(lora_str, PACKET_BYTES, "gasr: % 7.2f", bme.gas_resistance / 1000.0);
+      }
       break;
 
     case  HUMID_OP:
       if (! bme.performReading()) {
-        Serial.println("Error reading BME");
-        return;
+        Serial.println("Error reading BME humid");
+        snprintf(lora_str, PACKET_BYTES, "humid: ERR");
+      } else {
+        snprintf(lora_str, PACKET_BYTES, "humid: % 7.2f", bme.humidity );
       }
-      snprintf(lora_str, PACKET_BYTES, "humid: % 7.2f", bme.humidity );
       break;
 
     case  SHAKE_OP:
@@ -224,6 +236,7 @@ void send_next_msg() {
       break;
 
     default:
+      Serial.println("Unknown state!");
       break;
   }
 
@@ -235,19 +248,19 @@ void send_next_msg() {
   if (state >= MAX_STATE) {
     state = 0;
   }
-
+  Serial.print("sent, nect state ");
+  Serial.println(state);
 }
 
 void loop()
 {
 
-` // fixed 24 feb 2020, forgot unsigned! 
+  // fixed 24 feb 2020, forgot unsigned!
   unsigned long now = (unsigned long) millis();
-  
-  if (now - lastSendTime > interval_ms) {
 
+  if ( (now - lastSendTime) > (unsigned long) interval_ms) {
     send_next_msg();
-    lastSendTime = millis();            // timestamp the message
+    lastSendTime = (unsigned long) millis();            // timestamp the message
   }
 
   if (now - lastSecond > (unsigned long) 1000) {
@@ -255,23 +268,26 @@ void loop()
     mpu6050.update();
     angle = mpu6050.getAccAngleY();
 
-    if (mail_seconds) {
-      ++mail_seconds;
-    }
 
 
     if (abs(angle) > tilt_thresh_deg) {
       ++mail_open_seconds;
-      if (mail_open_seconds > MAIL_OPEN_SECONDS){
+      if (mail_open_seconds > MAIL_OPEN_SECONDS) {
         // start counting
         ++mail_seconds;
       }
     }
     else {
       mail_open_seconds = 0;
+      if (mail_seconds) {
+        ++mail_seconds;
+      }
+
     }
 
+    //Serial.print("mail_open_seconds ");
     //Serial.println(mail_open_seconds);
+
 
     if (digitalRead(DOOR_PIN) == HIGH) {
       door_flag = 1;
@@ -429,6 +445,9 @@ void update_display() {
   Heltec.display->drawString(3, 0, "tilt: " + String(angle));
   //Heltec.display->drawString(3, 0, "shake: " + String(max_shake));
   Heltec.display->drawString(3, 18, "seconds: " + String(mail_seconds));
+  Serial.print("mail_seconds ");
+  Serial.println(mail_seconds);
+
   Heltec.display->drawString(3, 36, "alarm: ARMED");
   Heltec.display->setFont(ArialMT_Plain_10);
   Heltec.display->drawString(3, 54, String("RSSI : " + String(LoRa.packetRssi())));
