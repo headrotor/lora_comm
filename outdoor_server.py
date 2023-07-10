@@ -13,6 +13,7 @@ import time
 import traceback
 import serial
 import socket
+import subprocess
 from pathlib import Path
 import os
 # local serial wrapper class
@@ -35,8 +36,27 @@ def carbon_write(varname, value):
     sock.close()
     print("sent carbon " + msg)
 
+def check_ping_time():
+    response_time = -1
+    try:
+        # Run the ping command and capture the output
+        ping_output = subprocess.check_output(["ping", "-c", "1", "yahoo.com"])
+        
+        
+    except subprocess.CalledProcessError:
+        # Handle the error if host is unreachable or ping times out
+        print("Error: Host is unreachable or ping timed out.")
+    else:
+        ping_output = ping_output.decode()
+        time_start = ping_output.find("time=") + len("time=")
+        time_end = ping_output.find(" ms", time_start)
+        response_time = float(ping_output[time_start:time_end])
+        sys.stdout.flush()
 
-    
+        
+    print("rt = {}".format(response_time))
+    return response_time
+                      
 def ubidots_write(varname, value):
     var = None
     try:
@@ -124,24 +144,29 @@ def parse_message(thestr, logfn, api):
             sys.stdout.flush()
             
 if __name__ == '__main__':
-    portname = '/dev/ttyUSB0'
     portbaud = '115200'
-    #portbaud = '120000000'
-
+    portlist = ['/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyUSB2']
     logfname = "/home/pi/outdoor.log"
 
     #ubidots
     api = ApiClient(token='BBFF-gjV5Rkr2FXKR4DRCwjDvlBRSjruPKP')
 
     print("starting")
-    
-    try:
-        ser = serial.Serial(portname,portbaud,timeout=0.1)
-    except serial.serialutil.SerialException as e:
-        print("Error opening port " + portname + " for device outdoor_rcv")
-        raise e
-        exit(0)
 
+    ser = serial.Serial()
+    count = 0
+
+    while ser.is_open is False:
+        port = portlist[count]
+        try:
+            ser = serial.Serial(port,portbaud,timeout=0.1)
+        except serial.serialutil.SerialException as e:
+            print("Error opening port " + port + " for device outdoor_rcv")
+        count = count + 1
+        if count >= len(portlist):
+            raise e
+        
+    
     then = time.time()
     print("listening")
     while(True):
@@ -177,10 +202,13 @@ if __name__ == '__main__':
             #print('memory % used:', psutil.virtual_memory()[2])
             cpu_mem = psutil.virtual_memory()[2]
             print("cpu load:  {}".format(cpu_pct))
+            response_time = check_ping_time()
+            print("ping:  {}".format(response_time))
 
             try:
                 carbon_write("pidp_load", cpu_pct)
-                carbon_write("pidp_mem", cpu_meme)
+                carbon_write("pidp_mem", cpu_mem)
+                carbon_write("ping_time", response_time)
             except Exception as e:
                 print("caught carbon exception, ignoring")
                 # happens when server is down, just ignore
