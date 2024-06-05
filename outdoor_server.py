@@ -162,9 +162,10 @@ if __name__ == '__main__':
             ser = serial.Serial(port,portbaud,timeout=0.1)
         except serial.serialutil.SerialException as e:
             print("Error opening port " + port + " for device outdoor_rcv")
-        count = count + 1
+            count = count + 1
         if count >= len(portlist):
-            raise e
+            print("could not find device on serial port")
+            exit()
         
     
     then = time.time()
